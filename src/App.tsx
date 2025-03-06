@@ -5,22 +5,43 @@ import { useAuthenticator } from '@aws-amplify/ui-react';
 
 const client = generateClient<Schema>();
 
-function App() {
-  const [todos, setTodos] = useState<Array<Schema["Todo"]["type"]>>([]);
+console.log(client);
 
+function App() {
+  const [todos, seTodos] = useState<Array<Schema["Todo"]["type"]>>([]);
+  const [theUser, setTheUser] = useState<Schema["User"]["type"] | null>(null);
+
+  console.log(theUser);
+  
   useEffect(() => {
     client.models.Todo.observeQuery().subscribe({
-      next: (data) => setTodos([...data.items]),
+      next: (data) => seTodos([...data.items]),
     });
   }, []);
 
-  function createTodo() {
-    client.models.Todo.create({ content: window.prompt("Todo content") });
-  }
-
   const { user, signOut } = useAuthenticator();
 
-  console.log(user);
+  useEffect(() => {
+    console.log(user);
+    // look up user, or create if not exist
+    client.models.Todo.get({ id: user.userId })
+    .then(({ data:appUser, errors}) => {
+      console.log(appUser, errors);
+      if (appUser === null) {
+        console.log('creating user')
+        client.models.User.create({id: user.userId, givenName: "John", surname: "Doe"})
+        .then(({data, errors}) => {
+          console.log(data);
+          // setTheUser(data);
+          console.log(errors);
+        });
+      }
+    });
+  }, [user])
+
+  function createTodo() {
+    // client.models.Todo.create({ content: window.prompt("Todo content") });
+  }
 
   return (
     <main>
