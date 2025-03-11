@@ -8,57 +8,57 @@ const client = generateClient<Schema>();
 console.log(client);
 
 function App() {
-  const [todos, seTodos] = useState<Array<Schema["Todo"]["type"]>>([]);
-  const [theUser, setTheUser] = useState<Schema["User"]["type"] | null>(null);
+  const [pets, setPets] = useState<Array<Schema["Pet"]["type"]>>([]);
+  const [appUser, setAppUser] = useState<Schema["User"]["type"] | null>(null);
+  const [version, setVersion] = useState(0);
 
-  console.log(theUser);
+  console.log(appUser);
+  console.log(client.models);
   
   useEffect(() => {
-    client.models.Todo.observeQuery().subscribe({
-      next: (data) => seTodos([...data.items]),
+    client.models.Pet.list().then(({ data }) => {
+      data ? setPets(data) : null;
     });
-  }, []);
+  }, [version]);
 
-  const { user, signOut } = useAuthenticator();
+  const { user:cognitoUser, signOut } = useAuthenticator();
 
   useEffect(() => {
-    console.log(user);
+    console.log(cognitoUser);
     // look up user, or create if not exist
-    client.models.Todo.get({ id: user.userId })
+    client.models.User.get({ id: cognitoUser.userId })
     .then(({ data:appUser, errors}) => {
       console.log(appUser, errors);
       if (appUser === null) {
         console.log('creating user')
-        client.models.User.create({id: user.userId, givenName: "John", surname: "Doe"})
-        .then(({data, errors}) => {
-          console.log(data);
-          // setTheUser(data);
+        client.models.User.create({id: cognitoUser.userId, givenName: "John", surname: "Doe"})
+        .then(({data:newUser, errors}) => {
+          console.log(newUser);
+          setAppUser(newUser);
           console.log(errors);
         });
+      } else {
+        setAppUser(appUser);
       }
     });
-  }, [user])
+  }, [cognitoUser])
 
-  function createTodo() {
-    // client.models.Todo.create({ content: window.prompt("Todo content") });
+  function createPet() {
+    if (appUser) {
+      const name = window.prompt("Pet name");
+      client.models.Pet.create({ name: name, userId: appUser.id });
+    }
   }
 
   return (
     <main>
-      <h1>My todos</h1>
-      <button onClick={createTodo}>+ new</button>
+      <h1>My pets</h1>
+      <button onClick={createPet}>+ new</button>
       <ul>
-        {todos.map((todo) => (
-          <li key={todo.id}>{todo.content}</li>
+        {pets.map((pet) => (
+          <li key={pet.id}>{pet.name}</li>
         ))}
       </ul>
-      <div>
-        🥳 App successfully hosted. Try creating a new todo.
-        <br />
-        <a href="https://docs.amplify.aws/react/start/quickstart/#make-frontend-updates">
-          Review next step of this tutorial.
-        </a>
-      </div>
       <button onClick={signOut}>Sign out</button>
     </main>
   );
