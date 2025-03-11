@@ -46,7 +46,8 @@ function App() {
   function createPet() {
     if (appUser) {
       const name = window.prompt("Pet name");
-      client.models.Pet.create({ name: name, userId: appUser.id });
+      client.models.Pet.create({ name: name, userId: appUser.id })
+      .then(() => setVersion(version + 1));
     }
   }
 
