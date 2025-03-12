@@ -2,12 +2,14 @@ import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 
 const schema = a.schema({
   User: a.model({
-    givenName: a.string().required(),
-    familyName: a.string().required(),
+    email: a.string(),
+    givenName: a.string(),
+    familyName: a.string(),
     pets: a.hasMany('Pet', 'userId'),
   }),
   Pet: a.model({
     name: a.string(),
+    photofile: a.string(),
     userId: a.id().required(),
     user: a.belongsTo('User', 'userId'),
   }),
