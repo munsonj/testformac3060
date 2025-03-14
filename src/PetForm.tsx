@@ -50,6 +50,7 @@ export function PetForm({ open, handleClose, userId}: PetFormProps) {
           onChange={
             (event: React.ChangeEvent<HTMLInputElement>) => setName(event.target.value)
           }
+          sx={{mb: 2}}
         />
         <FileUploader
           acceptedFileTypes={['image/*']}

@@ -9,36 +9,51 @@ import Grid from '@mui/material/Grid2';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import CardMedia from '@mui/material/CardMedia';
 import { PetForm, PetFormFields } from "./PetForm";
 import Fab from '@mui/material/Fab';
 import AddIcon from '@mui/icons-material/Add';
 import { SxProps } from '@mui/system';
+import { getUrl } from 'aws-amplify/storage';
 
 const client = generateClient<Schema>();
 
 const fabStyle = {
   position: 'absolute',
-  bottom: 16,
+  top: 72,
   right: 16,
 };
 const fabSx = fabStyle as SxProps;
 
 function App() {
   const [pets, setPets] = useState<Array<Schema["Pet"]["type"]>>([]);
+  const [photoUrls, setPhotoUrls] = useState<(string | null)[]>([]);
   const [appUser, setAppUser] = useState<Schema["User"]["type"] | null>(null);
   const [version, setVersion] = useState(0);
   const [addPetOpen, setAddPetOpen] = useState(false);
   
   useEffect(() => {
     client.models.Pet.list().then(({ data }) => {
-      data ? setPets(data) : null;
+      if (data) {
+        setPets(data);
+        const urlPromises = data.map(pet => {
+          return pet.photofile
+          ? getUrl({path:pet.photofile})
+          : null
+        });
+        Promise.all(urlPromises).then(urls => {
+          setPhotoUrls(urls.map(url => url ? url.url.toString() : null))
+        })
+      }
     });
   }, [version]);
 
   const { user:cognitoUser, signOut } = useAuthenticator();
 
   useEffect(() => {
-    // look up user, or create if not exist
+    // look up user, and create if they don't exist in my database
     client.models.User.get({ id: cognitoUser.userId })
     .then(({ data:appUser }) => {
       if (appUser === null) {
@@ -63,13 +78,19 @@ function App() {
 
   function handleAddPetClose(data : PetFormFields | null) {
     if (appUser && data) {
-      client.models.Pet.create({ name: data.name, photofile: data.filename, userId: appUser.id })
-      .then(() => setVersion(version + 1));
+      if (data.name && data.filename) {
+        client.models.Pet.create({ name: data.name, photofile: data.filename, userId: appUser.id })
+        .then(() => setVersion(version + 1));
+        setAddPetOpen(false);
+      } else {
+        alert("You must supply a name and photo file")
+      }
+    } else {
+      setAddPetOpen(false);
     }
-    setAddPetOpen(false);
   }
 
-  const photoprefix = appUser && appUser.email ? appUser.email : "";
+  const checkedemail = appUser && appUser.email ? appUser.email : "";
 
   return (
     <>
@@ -82,21 +103,36 @@ function App() {
             <Button color="inherit" onClick={signOut}>Logout</Button>
           </Toolbar>
         </AppBar>
-        <Grid container spacing={2}>
-          {pets.map(pet => {
+        <Grid container spacing={2} sx={{m:2}}>
+          {pets.map((pet , i) => {
             return (
-              <Grid key={pet.id} size={2}>{pet.name}</Grid>
+              <Grid key={pet.id} size={2}>
+                <Card>
+                  {photoUrls[i]
+                  ? <CardMedia
+                      sx={{ height: 140 }}
+                      image={photoUrls[i]}
+                      title={pet.name ? pet.name : "pet name"}
+                    />
+                  : null}
+                  <CardContent>
+                    <Typography gutterBottom variant="h5" component="div">
+                      {pet.name}
+                    </Typography>
+                  </CardContent>
+                </Card>
+                
+              </Grid>
             )
           })}
           
         </Grid>
 
       </Box>
-      <PetForm open={addPetOpen} handleClose={handleAddPetClose} userId={photoprefix}/>
+      <PetForm open={addPetOpen} handleClose={handleAddPetClose} userId={checkedemail}/>
       <Fab color="secondary" aria-label="add" sx={fabSx} onClick={() => setAddPetOpen(true)}>
         <AddIcon />
       </Fab>
-
     </>
   );
 }
