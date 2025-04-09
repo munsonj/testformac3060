@@ -17,6 +17,7 @@ import Fab from '@mui/material/Fab';
 import AddIcon from '@mui/icons-material/Add';
 import { SxProps } from '@mui/system';
 import { getUrl } from 'aws-amplify/storage';
+import ManyCheckboxesForm from "./ManyCheckboxesForm";
 
 const client = generateClient<Schema>();
 
@@ -33,6 +34,8 @@ function App() {
   const [appUser, setAppUser] = useState<Schema["User"]["type"] | null>(null);
   const [version, setVersion] = useState(0);
   const [addPetOpen, setAddPetOpen] = useState(false);
+
+  const [checkboxesOpen, setCheckboxesOpen] = useState(false);
   
   useEffect(() => {
     client.models.Pet.list().then(({ data }) => {
@@ -100,13 +103,14 @@ function App() {
             <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
               Pets
             </Typography>
+            <Button color="inherit" onClick={() => setCheckboxesOpen(true)}>Checkboxes</Button>
             <Button color="inherit" onClick={signOut}>Logout</Button>
           </Toolbar>
         </AppBar>
         <Grid container spacing={2} sx={{m:2}}>
           {pets.map((pet , i) => {
             return (
-              <Grid key={pet.id} size={2}>
+              <Grid key={pet.id} size={{xs:2, sm:3, md:4, lg:5, xl:6}}>
                 <Card>
                   {photoUrls[i]
                   ? <CardMedia
@@ -133,6 +137,7 @@ function App() {
       <Fab color="secondary" aria-label="add" sx={fabSx} onClick={() => setAddPetOpen(true)}>
         <AddIcon />
       </Fab>
+      <ManyCheckboxesForm open={checkboxesOpen} handleClose={() => setCheckboxesOpen(false)} />
     </>
   );
 }
